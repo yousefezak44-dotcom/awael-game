@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لعبة الأوائل</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{font-family:"Segoe UI",Tahoma,Arial,sans-serif;color:#fff;min-height:100vh;min-height:100dvh;
+  background:radial-gradient(circle at 50% 0%,#6a2fc0 0%,#3b1a6e 45%,#1d0c3d 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;overflow-x:hidden}
+h1{margin:0 0 4px;font-size:clamp(28px,8vw,44px);font-weight:800;color:#ffb84d;text-shadow:0 3px 0 #7a3d00}
+.sub{margin:0 0 22px;opacity:.85;font-size:clamp(15px,4vw,19px)}
+.stage{width:min(92vw,460px);background:#fff;color:#2a1257;border-radius:26px;padding:26px 16px 22px;
+  box-shadow:0 14px 0 #ff9f1c,0 24px 40px rgba(0,0,0,.45);position:relative;border:5px solid #ff9f1c}
+.label{font-size:15px;font-weight:700;color:#8b5bd6;margin-bottom:10px;letter-spacing:.5px}
+.reel{height:120px;display:flex;align-items:center;justify-content:center;border-radius:16px;
+  background:linear-gradient(180deg,#f3ecff,#e5d8ff);border:3px dashed #b895f2;padding:6px 10px;overflow:hidden}
+.name{font-size:clamp(24px,7vw,34px);font-weight:800;line-height:1.3;word-break:break-word}
+.reel.run .name{filter:blur(.6px);color:#6a2fc0}
+.reel.done{background:linear-gradient(180deg,#fff4d6,#ffe2a0);border:3px solid #ff9f1c;animation:pop .5s ease}
+.reel.done .name{color:#2a1257}
+@keyframes pop{0%{transform:scale(.85)}60%{transform:scale(1.07)}100%{transform:scale(1)}}
+.score{margin:16px auto 0;width:max-content;min-width:150px;padding:8px 22px;border-radius:999px;background:#ff9f1c;color:#2a1257;
+  font-weight:800;font-size:22px;visibility:hidden;box-shadow:0 4px 0 #b86a00}
+.score.show{visibility:visible;animation:pop .5s ease}
+.score small{font-size:15px;font-weight:700}
+button{font-family:inherit;font-weight:800;font-size:clamp(24px,7vw,30px);border:0;border-radius:18px;cursor:pointer;
+  width:min(92vw,460px);padding:16px;margin-top:26px;color:#fff;box-shadow:0 7px 0 rgba(0,0,0,.35);transition:transform .08s,box-shadow .08s}
+button:active{transform:translateY(5px);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+#go{background:#1fb26b}
+#go.stop{background:#e63946}
+button:disabled{opacity:.6;pointer-events:none}
+.count{margin-top:16px;font-size:15px;opacity:.8}
+canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+</style>
+</head>
+<body>
+<h1>🏆 لعبة الأوائل 🏆</h1>
+<p class="sub">دوس «ابدأ» وبعدين «توقف» وشوف مين الأول اللي هيظهر!</p>
+
+<div class="stage">
+  <div class="label">الاسم اللي هيطلع</div>
+  <div class="reel" id="reel"><div class="name" id="name">؟؟؟</div></div>
+  <div class="score" id="score"><small>الدرجة</small> <span id="sc"></span></div>
+</div>
+
+<button id="go">ابدأ</button>
+<div class="count" id="count"></div>
+<canvas id="cv"></canvas>
+
+<script>
+const STUDENTS = [{"n": "مارينا خلف فوزى", "s": 50}, {"n": "شهد عبير يوسف", "s": 49}, {"n": "اسماء يونس", "s": 49}, {"n": "ندى مصطفى حلمى", "s": 49}, {"n": "نانسي عيد", "s": 48}, {"n": "اسماء رمضان هاشم", "s": 48}, {"n": "كيرمينا عادل", "s": 48}, {"n": "يوستينا يوحنا", "s": 48}, {"n": "كيرلس جرجس فاروق", "s": 47}, {"n": "فبرونيا مدحت نجاح", "s": 47}, {"n": "ايريني ملاك", "s": 47}, {"n": "اميرة اشرف جرجس", "s": 47}, {"n": "مريم مدحت نجاح", "s": 47}, {"n": "مريم امير شحات", "s": 47}, {"n": "يوستينا موريس حنا", "s": 46}, {"n": "مريم رضا حنا", "s": 46}, {"n": "جومانه ملاك", "s": 46}, {"n": "مارنيا رافت انور", "s": 46}, {"n": "ايه عبد الناصر محمد", "s": 46}, {"n": "سما ابراهيم", "s": 46}, {"n": "لين محمد ربيع", "s": 46}, {"n": "ايرينى ثروت وليم", "s": 45}, {"n": "منه الله ايمن منصور", "s": 45}, {"n": "هدير احمد محمد", "s": 45}, {"n": "احمد محمد رجب", "s": 45}, {"n": "مينا عاطف لوقا", "s": 44}, {"n": "يوستينا اشرف", "s": 44}, {"n": "هاله فتحى على", "s": 44}, {"n": "منى محمود محمد", "s": 44}, {"n": "جومانا بشرى فوزى", "s": 44}, {"n": "جهاد اسلام عطيه", "s": 44}, {"n": "امنيه مصطفى", "s": 44}, {"n": "يوستينا كيرلس نصحي", "s": 43.5}, {"n": "مريم سامح بشري", "s": 43}, {"n": "هايدى ميلاد", "s": 43}, {"n": "عبد الرحمن نصر", "s": 42}, {"n": "مارلى ميلاد", "s": 42}, {"n": "دعاء احمد محمد", "s": 42}, {"n": "صموئيل رومانى نبيل", "s": 42}, {"n": "عبد الرحمن محمود", "s": 42}, {"n": "ادهم مصطفى صفاء الدين", "s": 42}, {"n": "انطونيوس كرم", "s": 41}, {"n": "يوسف جمعه", "s": 41}, {"n": "باهر مجدى اسحق", "s": 41}, {"n": "جنى على خلف", "s": 41}, {"n": "جلاسيا ايمن", "s": 40}, {"n": "دعاء محمد مجاور", "s": 40}, {"n": "نيرفانا اسامه", "s": 40}, {"n": "مهرائيل نوار وليم", "s": 40}, {"n": "مارنيا جرجس رمزى", "s": 40}];
+
+const reel=document.getElementById('reel'), nameEl=document.getElementById('name'),
+      scoreEl=document.getElementById('score'), scEl=document.getElementById('sc'),
+      go=document.getElementById('go'), countEl=document.getElementById('count');
+let pool=[], seen=0, state='idle', timer=null, cur=null;
+
+function refill(){ pool=STUDENTS.slice(); seen=0; }
+refill();
+const rnd=n=>Math.floor(Math.random()*n);
+function pick(){ return pool[rnd(pool.length)]; }
+function fmt(s){ return Number.isInteger(s)?s:s; }
+function updateCount(){ countEl.textContent = seen? ('ظهر '+seen+' من '+STUDENTS.length) : ''; }
+
+function start(){
+  state='run'; go.textContent='توقف'; go.classList.add('stop');
+  reel.className='reel run'; scoreEl.classList.remove('show');
+  const tick=()=>{ cur=pick(); nameEl.textContent=cur.n; timer=setTimeout(tick,70); };
+  tick();
+}
+function stop(){
+  state='slow'; go.disabled=true; clearTimeout(timer);
+  const delays=[110,140,180,230,300,400,540];
+  let i=0;
+  const step=()=>{
+    cur=pick(); nameEl.textContent=cur.n;
+    if(i<delays.length){ timer=setTimeout(step,delays[i++]); } else { finish(); }
+  };
+  step();
+}
+function finish(){
+  state='idle';
+  pool.splice(pool.indexOf(cur),1); seen++;
+  if(!pool.length){ setTimeout(()=>{refill();updateCount();},0); }
+  reel.className='reel done';
+  scEl.textContent=fmt(cur.s)+' / 50'; scoreEl.classList.add('show');
+  go.disabled=false; go.classList.remove('stop'); go.textContent='العب تاني';
+  updateCount(); confetti();
+}
+go.addEventListener('click',()=>{ if(state==='idle') start(); else if(state==='run') stop(); });
+
+/* confetti */
+const cv=document.getElementById('cv'), cx=cv.getContext('2d'); let parts=[],raf=null;
+function size(){ cv.width=innerWidth*devicePixelRatio; cv.height=innerHeight*devicePixelRatio; }
+addEventListener('resize',size); size();
+function confetti(){
+  const colors=['#ffb84d','#ff9f1c','#1fb26b','#e63946','#8b5bd6','#ffffff'];
+  for(let i=0;i<120;i++) parts.push({x:Math.random()*cv.width,y:-20*devicePixelRatio,vx:(Math.random()-.5)*6,vy:Math.random()*5+3,
+    r:Math.random()*8+5,c:colors[rnd(colors.length)],a:Math.random()*6,va:(Math.random()-.5)*.3});
+  if(!raf) loop();
+}
+function loop(){
+  cx.clearRect(0,0,cv.width,cv.height);
+  parts.forEach(p=>{p.x+=p.vx*devicePixelRatio;p.y+=p.vy*devicePixelRatio;p.vy+=.06;p.a+=p.va;
+    cx.save();cx.translate(p.x,p.y);cx.rotate(p.a);cx.fillStyle=p.c;cx.fillRect(-p.r/2,-p.r/4,p.r*devicePixelRatio/1.5,p.r*devicePixelRatio/3);cx.restore();});
+  parts=parts.filter(p=>p.y<cv.height+30);
+  if(parts.length) raf=requestAnimationFrame(loop); else { raf=null; cx.clearRect(0,0,cv.width,cv.height); }
+}
+</script>
+</body>
+</html>
